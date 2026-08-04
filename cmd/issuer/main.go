@@ -1,29 +1,49 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"log"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hgochev/jwt-token-service/internal/handlers"
+	"github.com/hgochev/jwt-token-service/internal/token"
 )
 
 func main() {
 
-	var router *gin.Engine = gin.Default()
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		log.Fatalf("generate signing key: %v", err)
+	}
 
-	router.POST("/jwt/create", handlers.CreateIssuerHandler())
+	issuer, err := token.NewIssuer(
+		"https://tokens.example.local",
+		"development-key-1",
+		privateKey,
+		5*time.Minute,
+	)
 
-	router.Run(":8080")
+	if err != nil {
+		log.Fatalf("create token issuer: %v", err)
+	}
+	// internal API — token issuance
+	apiRouter := gin.Default()
+	apiRouter.POST("/api/jwt/create", handlers.CreateTokenHandler(issuer))
 
-	// fmt.Println(signedToken)
+	// public metadata — JWKS discovery
+	metaRouter := gin.Default()
+	metaRouter.GET("/.well-known/jwks.json", handlers.CreateJWKSHandler(issuer))
 
-	// pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	// if err != nil {
-	// 	log.Fatalf("marshal public key: %v", err)
-	// }
+	// start both servers concurrently
+	go func() {
+		if err := metaRouter.Run(":8081"); err != nil {
+			log.Fatalf("metadata server: %v", err)
+		}
+	}()
 
-	// pubKeyPEM := pem.EncodeToMemory(&pem.Block{
-	// 	Type:  "PUBLIC KEY",
-	// 	Bytes: pubKeyBytes,
-	// })
-
-	// fmt.Println(string(pubKeyPEM))
+	if err := apiRouter.Run(":8080"); err != nil {
+		log.Fatalf("api server: %v", err)
+	}
 }
