@@ -1,20 +1,19 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
+	"crypto/rsa"
 	"log"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/hgochev/jwt-token-service/internal/handlers"
 	"github.com/hgochev/jwt-token-service/internal/token"
 )
 
 func main() {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Fatalf("generate signing key: %v", err)
 	}
@@ -29,27 +28,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("create token issuer: %v", err)
 	}
+	// internal API — token issuance
+	apiRouter := gin.Default()
+	apiRouter.POST("/api/jwt/create", handlers.CreateTokenHandler(issuer))
 
-	signedToken, err := issuer.Issue(
-		"system:serviceaccount:payments:payment-api",
-		"orders-api",
-		"orders:read",
-	)
-	if err != nil {
-		log.Fatalf("issue token: %v", err)
+	// public metadata — JWKS discovery
+	metaRouter := gin.Default()
+	metaRouter.GET("/.well-known/jwks.json", handlers.CreateJWKSHandler(issuer))
+
+	// start both servers concurrently
+	go func() {
+		if err := metaRouter.Run(":8081"); err != nil {
+			log.Fatalf("metadata server: %v", err)
+		}
+	}()
+
+	if err := apiRouter.Run(":8080"); err != nil {
+		log.Fatalf("api server: %v", err)
 	}
-
-	fmt.Println(signedToken)
-
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		log.Fatalf("marshal public key: %v", err)
-	}
-
-	pubKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKeyBytes,
-	})
-
-	fmt.Println(string(pubKeyPEM))
 }
