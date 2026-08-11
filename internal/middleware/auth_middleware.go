@@ -30,6 +30,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid kubernetes token"})
+			c.Abort()
 			return
 		}
 	}
