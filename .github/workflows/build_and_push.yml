@@ -17,6 +17,7 @@ jobs:
         run: |
           docker build . -t "jwt-token-issuer:${{ env.GITHUB_RUN_NUMBER }}"
       - name: Push docker image
+        run: |
           echo $CR_PAT | docker login ghcr.io -u hgochev --password-stdin
 
           docker push ghcr.io/hgochev/"jwt-token-issuer:${{ env.GITHUB_RUN_NUMBER }}"
