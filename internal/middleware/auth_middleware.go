@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -29,6 +30,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		err := auth.ValidateToken(c.Request.Context(), tokenString)
 
 		if err != nil {
+			log.Printf("token validation failed: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid kubernetes token"})
 			c.Abort()
 			return
