@@ -20,4 +20,4 @@ jobs:
         run: |
           echo $CR_PAT | docker login ghcr.io -u hgochev --password-stdin
 
-          docker push ghcr.io/hgochev/"jwt-token-issuer:${GITHUB_RUN_NUMBER}"
+          docker push "ghcr.io/hgochev/jwt-token-issuer:${GITHUB_RUN_NUMBER}"
