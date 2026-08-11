@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"github.com/golang-jwt/jwt/v5"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,8 +41,21 @@ func ValidateToken(ctx context.Context, token string) error {
 		return fmt.Errorf("invalid token")
 	}
 
+	parsedToken, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
+	if err != nil {
+		return fmt.Errorf("failed to parse token claims: %w", err)
+	}
+
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+
+	if !ok {
+		return fmt.Errorf("Invalid token claims")
+	}
+
 	fmt.Println("Authenticated user:", result.Status.User.Username)
 	fmt.Println("Groups:", result.Status.User.Groups)
+	claimsJSON, _ := json.MarshalIndent(claims, "", "  ")
+	fmt.Println("Token claims:", string(claimsJSON))
 
 	return nil
 }
