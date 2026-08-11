@@ -1,9 +1,10 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"log"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +14,16 @@ import (
 
 func main() {
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	keyBites, err := os.ReadFile("./private.key")
 	if err != nil {
-		log.Fatalf("generate signing key: %v", err)
+		log.Fatalf("Error loading private key: %v", err)
+	}
+
+	block, _ := pem.Decode(keyBites)
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	if err != nil {
+		log.Fatalf("Error parcing private key: %v", err)
 	}
 
 	issuer, err := token.NewIssuer(
