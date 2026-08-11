@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "jwt-token-service.fullname" . }}
+  name: {{ print (include "jwt-token-service.fullname" .) "-api" }}
   labels:
     {{- include "jwt-token-service.labels" . | nindent 4 }}
 spec:
@@ -38,7 +38,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.apiService.port }}
+              protocol: TCP
+            - name: jwks
+              containerPort: {{ .Values.jwksService.port }}
               protocol: TCP
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}

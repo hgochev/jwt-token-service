@@ -50,6 +50,16 @@ app.kubernetes.io/name: {{ include "jwt-token-service.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{- define "jwt-token-service.apiSelectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-api" (include "jwt-token-service.name" .) }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- define "jwt-token-service.jwksSelectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-jwks" (include "jwt-token-service.name" .) }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
 {{/*
 Create the name of the service account to use
 */}}
