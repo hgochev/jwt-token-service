@@ -14,7 +14,7 @@ import (
 
 func main() {
 
-	keyBites, err := os.ReadFile("./private.key")
+	keyBites, err := os.ReadFile("/etc/jwt/private.key")
 	if err != nil {
 		log.Fatalf("Error loading private key: %v", err)
 	}
