@@ -1,0 +1,22 @@
+name: Build and push image
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    env:
+      CR_PAT: ${{ secrets.CR_PAT }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build docker image
+        run: |
+          docker build . -t "jwt-token-issuer:${{ env.GITHUB_RUN_NUMBER }}"
+      - name: Push docker image
+          echo $CR_PAT | docker login ghcr.io -u hgochev --password-stdin
+
+          docker push ghcr.io/hgochev/"jwt-token-issuer:${{ env.GITHUB_RUN_NUMBER }}"

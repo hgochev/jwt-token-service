@@ -1,5 +1,5 @@
 {
-  "name": "Go Backend API",
+  "name": "JWT Token service",
   "image": "mcr.microsoft.com/devcontainers/go:1.26",
   "postCreateCommand": "sudo chown -R vscode:vscode /workspaces",
   "customizations": {
