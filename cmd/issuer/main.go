@@ -31,6 +31,7 @@ func main() {
 	// internal API — token issuance
 	apiRouter := gin.Default()
 	apiRouter.POST("/api/jwt/create", handlers.CreateTokenHandler(issuer))
+	apiRouter.GET("/healthz", handlers.HealthCheckHandler())
 
 	// public metadata — JWKS discovery
 	metaRouter := gin.Default()
