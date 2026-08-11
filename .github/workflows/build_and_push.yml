@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build docker image
         run: |
-          docker build . -t "jwt-token-issuer:${GITHUB_RUN_NUMBER}"
+          docker build . -t "ghcr.io/hgochev/jwt-token-issuer:${GITHUB_RUN_NUMBER}"
       - name: Push docker image
         run: |
           echo $CR_PAT | docker login ghcr.io -u hgochev --password-stdin
