@@ -42,14 +42,30 @@ func ValidateToken(ctx context.Context, token string) error {
 		return fmt.Errorf("invalid token")
 	}
 
+	parsedToken, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
+	if err != nil {
+		return fmt.Errorf("failed to parse token claims: %w", err)
+	}
+
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return fmt.Errorf("Invalid token claims")
+	}
+
+	namespace := ""
+	if k8s, ok := claims["kubernetes.io"].(map[string]interface{}); ok {
+		namespace, _ = k8s["namespace"].(string)
+	}
+
 	sar := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			User:   result.Status.User.Username,
 			Groups: result.Status.User.Groups,
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
-				Group:    "auth.jwt-tokek-service.io",
-				Resource: "tokens",
-				Verb:     "create",
+				Namespace: namespace,
+				Group:     "auth.jwt-token-service.io",
+				Resource:  "tokens",
+				Verb:      "create",
 			},
 		},
 	}
@@ -61,17 +77,6 @@ func ValidateToken(ctx context.Context, token string) error {
 
 	if !sarResult.Status.Allowed {
 		return fmt.Errorf("not authorized to create tokens")
-	}
-
-	parsedToken, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
-	if err != nil {
-		return fmt.Errorf("failed to parse token claims: %w", err)
-	}
-
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-
-	if !ok {
-		return fmt.Errorf("Invalid token claims")
 	}
 
 	fmt.Println("Authenticated user:", result.Status.User.Username)
