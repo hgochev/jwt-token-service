@@ -36,7 +36,6 @@ Client pod                     JWT Token Service                  Kubernetes API
 **Request body:**
 ```json
 {
-  "subject":  "system:serviceaccount:payments:payment-api",
   "audience": "orders-api",
   "scope":    "orders:read orders:write"
 }
@@ -44,9 +43,10 @@ Client pod                     JWT Token Service                  Kubernetes API
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `subject` | yes | The `sub` claim of the issued JWT |
 | `audience` | yes | The `aud` claim of the issued JWT |
 | `scope` | no | Space-separated scopes included as a custom `scope` claim |
+
+> The `sub` claim of the issued JWT is automatically set to the identity of the calling service account (from the Kubernetes service account token).
 
 **Response `201`:**
 ```json
@@ -152,7 +152,6 @@ curl -X POST http://jwt-token-service-api.<namespace>.svc.cluster.local:8080/api
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
   -d '{
-    "subject":  "system:serviceaccount:my-namespace:my-service-sa",
     "audience": "target-service",
     "scope":    "resource:read"
   }' | jq -r .token

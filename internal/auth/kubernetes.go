@@ -2,10 +2,8 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/golang-jwt/jwt/v5"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,76 +11,93 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func ValidateToken(ctx context.Context, token string) error {
+func ValidateToken(ctx context.Context, token string) (string, error) {
 	config, err := rest.InClusterConfig()
-
 	if err != nil {
-		return fmt.Errorf("failed to get cluster config: %w", err)
+		return "", fmt.Errorf("failed to create in-cluster config: %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
-
 	if err != nil {
-		return fmt.Errorf("failed to create kubernetes client: %w", err)
+		return "", fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	review := &authenticationv1.TokenReview{
+	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
 			Token: token,
 		},
 	}
 
-	result, err := clientset.AuthenticationV1().TokenReviews().Create(ctx, review, metav1.CreateOptions{})
-
+	result, err := clientset.AuthenticationV1().
+		TokenReviews().
+		Create(ctx, tokenReview, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("token review failed: %w", err)
+		return "", fmt.Errorf("token review failed: %w", err)
 	}
 
 	if !result.Status.Authenticated {
-		return fmt.Errorf("invalid token")
+		return "", fmt.Errorf("token is not authenticated")
 	}
 
-	parsedToken, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
+	username := result.Status.User.Username
+	if username == "" {
+		return "", fmt.Errorf("authenticated user has no username")
+	}
+
+	// Kubernetes ServiceAccount usernames have this form:
+	// system:serviceaccount:<namespace>:<service-account-name>
+	namespace, err := serviceAccountNamespace(username)
 	if err != nil {
-		return fmt.Errorf("failed to parse token claims: %w", err)
+		return "", err
 	}
 
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok {
-		return fmt.Errorf("Invalid token claims")
-	}
-
-	namespace := ""
-	if k8s, ok := claims["kubernetes.io"].(map[string]interface{}); ok {
-		namespace, _ = k8s["namespace"].(string)
-	}
-
-	sar := &authorizationv1.SubjectAccessReview{
+	subjectAccessReview := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
-			User:   result.Status.User.Username,
+			User:   username,
 			Groups: result.Status.User.Groups,
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
 				Namespace: namespace,
+				Verb:      "create",
 				Group:     "auth.jwt-token-service.io",
 				Resource:  "tokens",
-				Verb:      "create",
 			},
 		},
 	}
 
-	sarResult, err := clientset.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	sarResult, err := clientset.AuthorizationV1().
+		SubjectAccessReviews().
+		Create(ctx, subjectAccessReview, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("subject access review failed: %w", err)
+		return "", fmt.Errorf("subject access review failed: %w", err)
 	}
 
 	if !sarResult.Status.Allowed {
-		return fmt.Errorf("not authorized to create tokens")
+		return "", fmt.Errorf("user %q is not authorized to create tokens", username)
 	}
 
-	fmt.Println("Authenticated user:", result.Status.User.Username)
-	fmt.Println("Groups:", result.Status.User.Groups)
-	claimsJSON, _ := json.MarshalIndent(claims, "", "  ")
-	fmt.Println("Token claims:", string(claimsJSON))
+	return username, nil
+}
 
-	return nil
+func serviceAccountNamespace(username string) (string, error) {
+	const prefix = "system:serviceaccount:"
+
+	if len(username) <= len(prefix) || username[:len(prefix)] != prefix {
+		return "", fmt.Errorf("authenticated identity %q is not a service account", username)
+	}
+
+	remainder := username[len(prefix):]
+
+	for i := 0; i < len(remainder); i++ {
+		if remainder[i] == ':' {
+			namespace := remainder[:i]
+
+			if namespace == "" {
+				return "", fmt.Errorf("service account namespace is empty")
+			}
+
+			return namespace, nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid service account username %q", username)
 }
