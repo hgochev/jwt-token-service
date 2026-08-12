@@ -46,6 +46,10 @@ jwksService:
   type: ClusterIP
   port: 8081
 
+jwt:
+  audience: ""
+  scope: ""
+
 ingress:
   enabled: true
   className: "nginx"

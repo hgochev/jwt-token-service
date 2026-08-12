@@ -36,6 +36,11 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: JWT_AUDIENCE
+              value: {{ .Values.jwt.audience | quote }}
+            - name: JWT_SCOPE
+              value: {{ .Values.jwt.scope | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.apiService.port }}
