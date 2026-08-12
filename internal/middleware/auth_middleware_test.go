@@ -24,7 +24,7 @@ func newRouter(validate middleware.ValidateFunc) *gin.Engine {
 }
 
 func TestAuthMiddleware_MissingHeader(t *testing.T) {
-	r := newRouter(func(ctx context.Context, token string) error { return nil })
+	r := newRouter(func(ctx context.Context, token string) (string, error) { return "user", nil })
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", nil)
@@ -36,7 +36,7 @@ func TestAuthMiddleware_MissingHeader(t *testing.T) {
 }
 
 func TestAuthMiddleware_InvalidFormat(t *testing.T) {
-	r := newRouter(func(ctx context.Context, token string) error { return nil })
+	r := newRouter(func(ctx context.Context, token string) (string, error) { return "user", nil })
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", nil)
@@ -49,7 +49,7 @@ func TestAuthMiddleware_InvalidFormat(t *testing.T) {
 }
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
-	r := newRouter(func(ctx context.Context, token string) error { return nil })
+	r := newRouter(func(ctx context.Context, token string) (string, error) { return "system:serviceaccount:test:sa", nil })
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", nil)
@@ -62,7 +62,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
-	r := newRouter(func(ctx context.Context, token string) error { return errors.New("not authorized") })
+	r := newRouter(func(ctx context.Context, token string) (string, error) { return "", errors.New("not authorized") })
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", nil)

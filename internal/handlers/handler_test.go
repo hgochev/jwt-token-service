@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hgochev/jwt-token-service/internal/handlers"
+	"github.com/hgochev/jwt-token-service/internal/middleware"
 	"github.com/hgochev/jwt-token-service/internal/token"
 )
 
@@ -32,6 +33,14 @@ func newTestIssuer(t *testing.T) *token.Issuer {
 	return issuer
 }
 
+// setAuthUser injects the authenticated username into the gin context, simulating the middleware.
+func setAuthUser(username string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(middleware.AuthenticatedUserKey, username)
+		c.Next()
+	}
+}
+
 func TestHealthCheckHandler(t *testing.T) {
 	r := gin.New()
 	r.GET("/healthz", handlers.HealthCheckHandler())
@@ -47,10 +56,9 @@ func TestHealthCheckHandler(t *testing.T) {
 
 func TestCreateTokenHandler_Valid(t *testing.T) {
 	r := gin.New()
-	r.POST("/api/jwt/create", handlers.CreateTokenHandler(newTestIssuer(t)))
+	r.POST("/api/jwt/create", setAuthUser("system:serviceaccount:payments:payment-api"), handlers.CreateTokenHandler(newTestIssuer(t)))
 
 	body, _ := json.Marshal(map[string]string{
-		"subject":  "system:serviceaccount:payments:payment-api",
 		"audience": "orders-api",
 		"scope":    "orders:read",
 	})
@@ -69,26 +77,11 @@ func TestCreateTokenHandler_Valid(t *testing.T) {
 	}
 }
 
-func TestCreateTokenHandler_MissingSubject(t *testing.T) {
-	r := gin.New()
-	r.POST("/api/jwt/create", handlers.CreateTokenHandler(newTestIssuer(t)))
-
-	body, _ := json.Marshal(map[string]string{"audience": "orders-api"})
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status: got %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
 func TestCreateTokenHandler_MissingAudience(t *testing.T) {
 	r := gin.New()
-	r.POST("/api/jwt/create", handlers.CreateTokenHandler(newTestIssuer(t)))
+	r.POST("/api/jwt/create", setAuthUser("my-service"), handlers.CreateTokenHandler(newTestIssuer(t)))
 
-	body, _ := json.Marshal(map[string]string{"subject": "my-service"})
+	body, _ := json.Marshal(map[string]string{"scope": "read"})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -101,7 +94,7 @@ func TestCreateTokenHandler_MissingAudience(t *testing.T) {
 
 func TestCreateTokenHandler_InvalidJSON(t *testing.T) {
 	r := gin.New()
-	r.POST("/api/jwt/create", handlers.CreateTokenHandler(newTestIssuer(t)))
+	r.POST("/api/jwt/create", setAuthUser("my-service"), handlers.CreateTokenHandler(newTestIssuer(t)))
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", bytes.NewReader([]byte("not-json")))
@@ -110,6 +103,21 @@ func TestCreateTokenHandler_InvalidJSON(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status: got %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestCreateTokenHandler_MissingAuthContext(t *testing.T) {
+	r := gin.New()
+	r.POST("/api/jwt/create", handlers.CreateTokenHandler(newTestIssuer(t)))
+
+	body, _ := json.Marshal(map[string]string{"audience": "orders-api"})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/jwt/create", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("status: got %d, want %d", w.Code, http.StatusInternalServerError)
 	}
 }
 

@@ -58,3 +58,9 @@ func CreateTokenHandler(issuer *token.Issuer) gin.HandlerFunc {
 		})
 	}
 }
+
+func CreateJWKSHandler(issuer *token.Issuer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, issuer.JWKS())
+	}
+}
