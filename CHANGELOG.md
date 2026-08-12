@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/hgochev/jwt-token-service/compare/v1.1.0...v1.1.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **auth:** Remove the opiton for the client to set the subject ([ca73cc6](https://github.com/hgochev/jwt-token-service/commit/ca73cc6164bcdda131b22de4a52fd3f469fea343))
+
 # [1.1.0](https://github.com/hgochev/jwt-token-service/compare/v1.0.1...v1.1.0) (2026-08-12)
 
 
