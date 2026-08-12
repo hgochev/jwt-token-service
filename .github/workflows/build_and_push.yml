@@ -32,7 +32,7 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
-      version: ${{ steps.release.outputs.version }}
+      version: ${{ steps.release.outputs.new_release_version }}
       released: ${{ steps.release.outputs.new_release_published }}
     steps:
       - name: Checkout repository
