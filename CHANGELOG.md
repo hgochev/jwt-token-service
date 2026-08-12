@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/hgochev/jwt-token-service/compare/v1.0.0...v1.0.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **fix:** Fix docker build versionning ([818646d](https://github.com/hgochev/jwt-token-service/commit/818646d1ee49557d56c99a48771a0e0dcd64d431))
+
 # 1.0.0 (2026-08-12)
 
 
