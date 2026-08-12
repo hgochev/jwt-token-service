@@ -8,7 +8,7 @@ image:
   repository: ghcr.io/hgochev/jwt-token-issuer
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "10"
+  tag: "14"
 
 imagePullSecrets:
   - name: jwt-token-service-image-pull-secret
