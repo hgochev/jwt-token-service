@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/hgochev/jwt-token-service/compare/v1.0.1...v1.1.0) (2026-08-12)
+
+
+### Features
+
+* **docs:** Update README ([ff61538](https://github.com/hgochev/jwt-token-service/commit/ff61538761bbf53e033437020e1da7a6629fd2ca))
+
 ## [1.0.1](https://github.com/hgochev/jwt-token-service/compare/v1.0.0...v1.0.1) (2026-08-12)
 
 
