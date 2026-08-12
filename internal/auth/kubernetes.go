@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	authenticationv1 "k8s.io/api/authentication/v1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -39,6 +40,27 @@ func ValidateToken(ctx context.Context, token string) error {
 
 	if !result.Status.Authenticated {
 		return fmt.Errorf("invalid token")
+	}
+
+	sar := &authorizationv1.SubjectAccessReview{
+		Spec: authorizationv1.SubjectAccessReviewSpec{
+			User:   result.Status.User.Username,
+			Groups: result.Status.User.Groups,
+			ResourceAttributes: &authorizationv1.ResourceAttributes{
+				Group:    "auth.jwt-tokek-service.io",
+				Resource: "tokens",
+				Verb:     "create",
+			},
+		},
+	}
+
+	sarResult, err := clientset.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("subject access review failed: %w", err)
+	}
+
+	if !sarResult.Status.Allowed {
+		return fmt.Errorf("not authorized to create tokens")
 	}
 
 	parsedToken, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
