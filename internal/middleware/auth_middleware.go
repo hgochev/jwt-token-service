@@ -1,15 +1,17 @@
 package middleware
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hgochev/jwt-token-service/internal/auth"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+type ValidateFunc func(ctx context.Context, token string) error
+
+func AuthMiddleware(validate ValidateFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
@@ -27,7 +29,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		err := auth.ValidateToken(c.Request.Context(), tokenString)
+		err := validate(c.Request.Context(), tokenString)
 
 		if err != nil {
 			log.Printf("token validation failed: %v", err)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hgochev/jwt-token-service/internal/auth"
 	"github.com/hgochev/jwt-token-service/internal/handlers"
 	"github.com/hgochev/jwt-token-service/internal/middleware"
 	"github.com/hgochev/jwt-token-service/internal/token"
@@ -39,7 +40,7 @@ func main() {
 	}
 	// internal API — token issuance
 	apiRouter := gin.Default()
-	apiRouter.POST("/api/jwt/create", middleware.AuthMiddleware(), handlers.CreateTokenHandler(issuer))
+	apiRouter.POST("/api/jwt/create", middleware.AuthMiddleware(auth.ValidateToken), handlers.CreateTokenHandler(issuer))
 	apiRouter.GET("/healthz", handlers.HealthCheckHandler())
 
 	// public metadata — JWKS discovery
