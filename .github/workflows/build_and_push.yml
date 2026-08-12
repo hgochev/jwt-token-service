@@ -1,6 +1,9 @@
 name: Build and push image
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -20,10 +23,39 @@ jobs:
       - name: Run tests
         run: go test ./...
 
-  build-and-push:
+  release:
     needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      released: ${{ steps.release.outputs.new_release_published }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Run semantic-release
+        id: release
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+            @semantic-release/exec
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push:
+    needs: release
+    if: needs.release.outputs.released == 'true'
     env:
       CR_PAT: ${{ secrets.CR_PAT }}
+      VERSION: ${{ needs.release.outputs.version }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -35,9 +67,9 @@ jobs:
           docker build . \
             --cache-from ghcr.io/hgochev/jwt-token-issuer:latest \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            -t "ghcr.io/hgochev/jwt-token-issuer:${GITHUB_RUN_NUMBER}" \
+            -t "ghcr.io/hgochev/jwt-token-issuer:${VERSION}" \
             -t "ghcr.io/hgochev/jwt-token-issuer:latest"
       - name: Push docker image
         run: |
-          docker push "ghcr.io/hgochev/jwt-token-issuer:${GITHUB_RUN_NUMBER}"
+          docker push "ghcr.io/hgochev/jwt-token-issuer:${VERSION}"
           docker push "ghcr.io/hgochev/jwt-token-issuer:latest"
