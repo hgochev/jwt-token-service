@@ -33,20 +33,9 @@ Client pod                     JWT Token Service                  Kubernetes API
 **Port:** `8080`
 **Auth:** Kubernetes service account Bearer token (see [Client setup](#client-setup))
 
-**Request body:**
-```json
-{
-  "audience": "orders-api",
-  "scope":    "orders:read orders:write"
-}
-```
+**Request body:** none
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `audience` | yes | The `aud` claim of the issued JWT |
-| `scope` | no | Space-separated scopes included as a custom `scope` claim |
-
-> The `sub` claim of the issued JWT is automatically set to the identity of the calling service account (from the Kubernetes service account token).
+> The `sub`, `aud`, and `scope` claims are determined entirely by the service configuration — see [Configuration](#configuration).
 
 **Response `201`:**
 ```json
@@ -149,12 +138,8 @@ Once applied, pods using `my-service-sa` can call the service:
 
 ```bash
 curl -X POST http://jwt-token-service-api.<namespace>.svc.cluster.local:8080/api/jwt/create \
-  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-  -d '{
-    "audience": "target-service",
-    "scope":    "resource:read"
-  }' | jq -r .token
+  | jq -r .token
 ```
 
 ---
@@ -191,11 +176,41 @@ helm install dev ./deploy/helm/jwt-token-service \
 |-------|---------|-------------|
 | `image.repository` | `ghcr.io/hgochev/jwt-token-issuer` | Image repository |
 | `image.tag` | Chart `appVersion` | Image tag |
+| `jwt.audience` | `""` | **Required.** The `aud` claim for all issued tokens |
+| `jwt.scope` | `""` | Space-separated scopes for all issued tokens |
 | `apiService.port` | `8080` | Token issuance port |
 | `jwksService.port` | `8081` | JWKS discovery port |
 | `ingress.enabled` | `true` | Enable ingress |
 | `ingress.hosts[0].host` | `jwt-token-service.local` | Ingress hostname |
 | `autoscaling.enabled` | `false` | Enable HPA |
+
+---
+
+## Configuration
+
+The service is configured entirely via environment variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JWT_AUDIENCE` | yes | The `aud` claim for all issued tokens |
+| `JWT_SCOPE` | no | Space-separated scopes set as the `scope` claim |
+
+With Helm, set these in `values.yaml`:
+
+```yaml
+jwt:
+  audience: "orders-api"
+  scope: "orders:read orders:write"
+```
+
+Or at install/upgrade time:
+
+```bash
+helm upgrade dev ./deploy/helm/jwt-token-service \
+  --namespace jwt-token-service \
+  --set jwt.audience=orders-api \
+  --set jwt.scope="orders:read orders:write"
+```
 
 ### Upgrade
 

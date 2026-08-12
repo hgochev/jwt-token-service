@@ -9,12 +9,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hgochev/jwt-token-service/internal/auth"
+	"github.com/hgochev/jwt-token-service/internal/config"
 	"github.com/hgochev/jwt-token-service/internal/handlers"
 	"github.com/hgochev/jwt-token-service/internal/middleware"
 	"github.com/hgochev/jwt-token-service/internal/token"
 )
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
+	}
 
 	keyBites, err := os.ReadFile("/etc/jwt/private.key")
 	if err != nil {
@@ -40,7 +45,7 @@ func main() {
 	}
 	// internal API — token issuance
 	apiRouter := gin.Default()
-	apiRouter.POST("/api/jwt/create", middleware.AuthMiddleware(auth.ValidateToken), handlers.CreateTokenHandler(issuer))
+	apiRouter.POST("/api/jwt/create", middleware.AuthMiddleware(auth.ValidateToken), handlers.CreateTokenHandler(issuer, cfg))
 	apiRouter.GET("/healthz", handlers.HealthCheckHandler())
 
 	// public metadata — JWKS discovery
