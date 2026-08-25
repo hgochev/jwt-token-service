@@ -49,6 +49,9 @@ jwksService:
 jwt:
   audience: ""
   scope: ""
+  issuerURL: ""
+  keyID: ""
+  tokenTTL: "5m"
 
 ingress:
   enabled: true

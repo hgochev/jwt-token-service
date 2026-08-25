@@ -41,6 +41,12 @@ spec:
               value: {{ .Values.jwt.audience | quote }}
             - name: JWT_SCOPE
               value: {{ .Values.jwt.scope | quote }}
+            - name: JWT_ISSUER_URL
+              value: {{ .Values.jwt.issuerURL | quote }}
+            - name: JWT_KEY_ID
+              value: {{ .Values.jwt.keyID | quote }}
+            - name: JWT_TOKEN_TTL
+              value: {{ .Values.jwt.tokenTTL | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.apiService.port }}
