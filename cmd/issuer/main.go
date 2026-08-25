@@ -5,7 +5,6 @@ import (
 	"encoding/pem"
 	"log"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hgochev/jwt-token-service/internal/auth"
@@ -34,10 +33,10 @@ func main() {
 	}
 
 	issuer, err := token.NewIssuer(
-		"https://tokens.example.local",
-		"development-key-1",
+		cfg.IssuerURL,
+		cfg.KeyID,
 		privateKey,
-		5*time.Minute,
+		cfg.TokenTTL,
 	)
 
 	if err != nil {
